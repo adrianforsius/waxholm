@@ -1,0 +1,7 @@
+config:
+  linode:token:
+    secure: AAABABTpoNP6eXMS3D1nn42Qi1r9o2UVJLIxoMIj2ii1H6iZwW7Pp/g21BTE+KLchIUJgxpZu6h2pSsRUeHuXPyoCwxEYYu7HW4saP75v78SR8lv7sqk+Gz+H/URjWCV
+  waxholm:root:
+    secure: AAABAHZRoQPfgwwPF7fukzDz9HuGtEgBgSJC3hZ2mjz3MxwlA+BsFq3QwynkBCkl/qMNCtOTDyEc82l3lEt5gKsePFWRfOHX5leNTc/tpwocaUSokRHocsO+i3V25LKU
+  waxholm:ssh-key:
+    secure: AAABAE6wI9o8vBkXuX4gGz9MnhwpDvQ/kNIY1I1hI3hOl/4qC0wwCImSHACxtpbNkm9bEhTAfv4nJ8jB7083OGaTFrE0954WCDD4DsDkcLmNhAjcQBIz2Z5CQEGYksaN/02ZrmcBMvgOdzMQukHyvUyMad/XAZqK7hONSbdNLbWNWii8shcjT09iwCvf
