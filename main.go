@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/pulumi/pulumi-command/sdk/go/command/remote"
 	"github.com/pulumi/pulumi-linode/sdk/v4/go/linode"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
@@ -36,6 +37,28 @@ func main() {
 		if err != nil {
 			return fmt.Errorf("domain: %w", err)
 		}
+
+		instance.ID().ApplyT(func(id string) error {
+			_, err := remote.NewCopyFile(ctx, "docker-compose-copy", &remote.CopyFileArgs{
+				Connection: remote.ConnectionArgs{Host: pulumi.String(id)},
+				LocalPath:  pulumi.String("docker-compose.yml"),
+				RemotePath: pulumi.String("~/"),
+			})
+			if err != nil {
+				return fmt.Errorf("copy: %w", err)
+			}
+
+			_, err = remote.NewCommand(ctx, "install deps", &remote.CommandArgs{
+				Connection: remote.ConnectionArgs{Host: pulumi.String(id)},
+				// curl is already installed in the instance image
+				Create: pulumi.String("curl -L https://github.com/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose"),
+			})
+			if err != nil {
+				return fmt.Errorf("deps: %w", err)
+			}
+
+			return nil
+		})
 
 		// Export the DNS name of the instance
 		ctx.Export("instanceIpAddress", instance.IpAddress)
