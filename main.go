@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/pulumi/pulumi-command/sdk/go/command/remote"
 	"github.com/pulumi/pulumi-linode/sdk/v4/go/linode"
@@ -12,12 +14,26 @@ import (
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 		cfg := config.New(ctx, "")
-		sshKey := cfg.RequireSecret("ssh-key")
+
+		publicKeyPath := cfg.Get("ssh_public_key_path")
+		publicKey, err := os.ReadFile(publicKeyPath)
+		if err != nil {
+			return fmt.Errorf("read ssh file: %w", err)
+		}
+		fmt.Println("public key", string(publicKey))
+
+		privateKeyPath := cfg.Get("ssh_private_key_path")
+		ctx.Log.Info(fmt.Sprintf("public key path: %s", privateKeyPath), nil)
+		privateKey, err := os.ReadFile(privateKeyPath)
+		if err != nil {
+			return fmt.Errorf("read ssh file: %w", err)
+		}
 
 		// Create a linode resource (Linode Instance)
+		ctx.Log.Info("creating new instance...", nil)
 		instance, err := linode.NewInstance(ctx, "my-linode", &linode.InstanceArgs{
 			AuthorizedKeys: pulumi.StringArray{
-				sshKey,
+				pulumi.String(strings.TrimSpace(string(publicKey))),
 			},
 			RootPass: cfg.RequireSecret("root"),
 			Type:     pulumi.String("g6-nanode-1"),
@@ -28,7 +44,7 @@ func main() {
 			return fmt.Errorf("instance: %w", err)
 		}
 
-		fmt.Println("creating new domain...")
+		ctx.Log.Info("creating new domain...", nil)
 		_, err = linode.NewDomain(ctx, "matus.se", &linode.DomainArgs{
 			Domain:   pulumi.String("matus.se"),
 			SoaEmail: pulumi.String("adrianforsius@gmail.com"),
@@ -38,24 +54,38 @@ func main() {
 			return fmt.Errorf("domain: %w", err)
 		}
 
-		instance.ID().ApplyT(func(id string) error {
+		instance.IpAddress.ApplyT(func(ip string) error {
+			ctx.Log.Info(fmt.Sprintf("copying files to ip: %s", ip), nil)
 			_, err := remote.NewCopyFile(ctx, "docker-compose-copy", &remote.CopyFileArgs{
-				Connection: remote.ConnectionArgs{Host: pulumi.String(id)},
+				Connection: remote.ConnectionArgs{
+					Host:               pulumi.String(ip),
+					Password:           cfg.RequireSecret("root"),
+					PrivateKey:         pulumi.String(privateKey),
+					PrivateKeyPassword: cfg.RequireSecret("ssh_private_key_pass"),
+				},
 				LocalPath:  pulumi.String("docker-compose.yml"),
-				RemotePath: pulumi.String("~/"),
+				RemotePath: pulumi.String("/root/docker-compose.yml"),
 			})
 			if err != nil {
 				return fmt.Errorf("copy: %w", err)
 			}
 
-			_, err = remote.NewCommand(ctx, "install deps", &remote.CommandArgs{
-				Connection: remote.ConnectionArgs{Host: pulumi.String(id)},
+			ctx.Log.Info(fmt.Sprintf("install deps using ip: %s", ip), nil)
+			cmd, err := remote.NewCommand(ctx, "install-deps", &remote.CommandArgs{
+				Connection: remote.ConnectionArgs{
+					Host:               pulumi.String(ip),
+					Password:           cfg.RequireSecret("root"),
+					PrivateKey:         pulumi.String(privateKey),
+					PrivateKeyPassword: cfg.RequireSecret("ssh_private_key_pass"),
+				},
 				// curl is already installed in the instance image
-				Create: pulumi.String("curl -L https://github.com/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose"),
+				Create: pulumi.String("curl -L https://github.com/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose && su - && chmod +x /usr/local/bin/docker-compose"),
 			})
 			if err != nil {
 				return fmt.Errorf("deps: %w", err)
 			}
+
+			ctx.Export("deps-out", cmd.Stdout)
 
 			return nil
 		})
