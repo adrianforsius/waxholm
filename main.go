@@ -6,7 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pulumi/pulumi-command/sdk/go/command/local"
 	"github.com/pulumi/pulumi-command/sdk/go/command/remote"
+
+	// "github.com/pulumi/pulumi-command/sdk/go/command/remote"
 	"github.com/pulumi/pulumi-linode/sdk/v4/go/linode"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
@@ -83,34 +86,52 @@ func main() {
 				return fmt.Errorf("cloud record: %w", err)
 			}
 
-			ctx.Log.Info(fmt.Sprintf("copying files to ip: %s", ip), nil)
-			_, err := remote.NewCopyFile(ctx, "docker-compose-copy", &remote.CopyFileArgs{
-				Connection: remote.ConnectionArgs{
-					Host:               pulumi.String(ip),
-					Password:           cfg.RequireSecret("root"),
-					PrivateKey:         pulumi.String(privateKey),
-					PrivateKeyPassword: cfg.RequireSecret("ssh_private_key_pass"),
-				},
-				LocalPath:  pulumi.String("docker-compose.yml"),
-				RemotePath: pulumi.String("/root/docker-compose.yml"),
-			})
-			if err != nil {
-				return fmt.Errorf("copy: %w", err)
-			}
+			// ctx.Log.Info(fmt.Sprintf("copying files to ip: %s", ip), nil)
+			// _, err := remote.NewCopyFile(ctx, "docker-compose-copy", &remote.CopyFileArgs{
+			// 	Connection: remote.ConnectionArgs{
+			// 		Host:               pulumi.String(ip),
+			// 		Password:           cfg.RequireSecret("root"),
+			// 		PrivateKey:         pulumi.String(privateKey),
+			// 		PrivateKeyPassword: cfg.RequireSecret("ssh_private_key_pass"),
+			// 	},
+			// 	LocalPath:  pulumi.String("docker-compose.yml"),
+			// 	RemotePath: pulumi.String("/root/docker-compose.yml"),
+			// })
+			// if err != nil {
+			// 	return fmt.Errorf("copy: %w", err)
+			// }
 
 			ctx.Log.Info(fmt.Sprintf("install deps using ip: %s", ip), nil)
-			cmd, err := remote.NewCommand(ctx, "install-deps", &remote.CommandArgs{
-				Connection: remote.ConnectionArgs{
-					Host:               pulumi.String(ip),
-					Password:           cfg.RequireSecret("root"),
-					PrivateKey:         pulumi.String(privateKey),
-					PrivateKeyPassword: cfg.RequireSecret("ssh_private_key_pass"),
+			pythonCmd, err := remote.NewCommand(ctx, "ansibleReqs", &remote.CommandArgs{
+				Connection: &remote.ConnectionArgs{
+					Host:       pulumi.String(ip),
+					Port:       pulumi.Float64(22),
+					PrivateKey: pulumi.String(privateKey),
 				},
-				// curl is already installed in the instance image
-				Create: pulumi.String("sudo apt-get update && sudo apt-get install -y ca-certificates curl gnupg && sudo install -m 0755 -d /etc/apt/keyrings && curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg && sudo chmod a+r /etc/apt/keyrings/docker.gpg && echo \"deb [arch=\"$(dpkg --print-architecture)\" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \"$(. /etc/os-release && echo \"$VERSION_CODENAME\")\" stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null && sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"),
+				Create: pulumi.String("sudo yum update -y && sudo yum install python35 -y\n"),
 			})
 			if err != nil {
-				return fmt.Errorf("deps: %w", err)
+				return fmt.Errorf("ansible reqs: %w", err)
+			}
+
+			renderCmd, err := local.NewCommand(ctx, "playbookEnvs", &local.CommandArgs{
+				Create: pulumi.String("cat playbook.yml | envsubst > playbook.with-envs.yml"),
+				Environment: pulumi.StringMap{
+					"TS_AUTHKEY": cfg.RequireSecret("tailscale_auth_key"),
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("envs: %w", err)
+			}
+
+			cmd, err := local.NewCommand(ctx, "playbookRun", &local.CommandArgs{
+				Create: pulumi.String(fmt.Sprintf("ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i '%s,' --private-key %s playbook.with-envs.yml", ip, privateKey)),
+			}, pulumi.DependsOn([]pulumi.Resource{
+				renderCmd,
+				pythonCmd,
+			}))
+			if err != nil {
+				return fmt.Errorf("playbook: %w", err)
 			}
 
 			ctx.Export("deps-out", cmd.Stdout)

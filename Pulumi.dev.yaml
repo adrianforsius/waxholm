@@ -7,3 +7,5 @@ config:
     secure: AAABAM+gbNRh7k2DoSxmAcRtNoqxr7nsWEy0cxQDrw3Y3SxghzW2Oo0=
   waxholm:ssh_private_key_path: /Users/adrianforsius/.ssh/id_ed25519
   waxholm:ssh_public_key_path: /Users/adrianforsius/.ssh/id_ed25519.pub
+  waxholm:tailscale_auth_key:
+    secure: AAABAIlUSC7A18rfXHK+rhDl49TI268Qfphtq23wlls3fJaEouqhvVKFwwHM56TPUausLYz7ntxfYU7kyT47B/L5WnYW1kMBQ+gQ7iMCR0cIyZoTGqeKrpU=
