@@ -24,7 +24,6 @@ func main() {
 		if err != nil {
 			return fmt.Errorf("read ssh file: %w", err)
 		}
-		fmt.Println("public key", string(publicKey))
 
 		privateKeyPath := cfg.Get("ssh_private_key_path")
 		ctx.Log.Info(fmt.Sprintf("public key path: %s", privateKeyPath), nil)
@@ -48,67 +47,78 @@ func main() {
 			return fmt.Errorf("instance: %w", err)
 		}
 
-		ctx.Log.Info("creating new domain...", nil)
-		domain, err := linode.NewDomain(ctx, "adrianforsiusconsulting.se", &linode.DomainArgs{
-			Domain:   pulumi.String("adrianforsiusconsulting.se"),
-			SoaEmail: pulumi.String("adrianforsius@gmail.com"),
-			Type:     pulumi.String("master"),
-		})
-		if err != nil {
-			return fmt.Errorf("domain: %w", err)
-		}
-		var domainID int
-		domain.ID().ApplyT(func(id string) error {
-			domainID, err = strconv.Atoi(id)
-			if err != nil {
-				return fmt.Errorf("invalid id: %w", err)
-			}
-			return nil
-		})
-
 		instance.IpAddress.ApplyT(func(ip string) error {
-			_, err = linode.NewDomainRecord(ctx, "A", &linode.DomainRecordArgs{
-				DomainId:   pulumi.Int(domainID),
-				RecordType: pulumi.String("A"),
-				Target:     pulumi.String(ip),
+			ctx.Log.Info(fmt.Sprintf("copying files to ip: %s", ip), nil)
+			_, err := remote.NewCopyFile(ctx, "docker-compose-copy", &remote.CopyFileArgs{
+				Connection: remote.ConnectionArgs{
+					Host:               pulumi.String(ip),
+					Password:           cfg.RequireSecret("root"),
+					PrivateKey:         pulumi.String(privateKey),
+					PrivateKeyPassword: cfg.RequireSecret("ssh_private_key_pass"),
+				},
+				LocalPath:  pulumi.String("docker-compose.yml"),
+				RemotePath: pulumi.String("/root/docker-compose.yml"),
 			})
 			if err != nil {
-				return fmt.Errorf("record A: %w", err)
+				return fmt.Errorf("copy: %w", err)
 			}
 
-			_, err = linode.NewDomainRecord(ctx, "cloud", &linode.DomainRecordArgs{
-				DomainId:   pulumi.Int(domainID),
-				Name:       pulumi.String("cloud"),
-				RecordType: pulumi.String("CNAME"),
-				Target:     pulumi.String("adrianforsiusconsulting.se"),
+			ctx.Log.Info("creating new domain...", nil)
+			domain, err := linode.NewDomain(ctx, "adrianforsiusconsulting.se", &linode.DomainArgs{
+				Domain:   pulumi.String("adrianforsiusconsulting.se"),
+				SoaEmail: pulumi.String("adrianforsius@gmail.com"),
+				Type:     pulumi.String("master"),
 			})
 			if err != nil {
-				return fmt.Errorf("cloud record: %w", err)
+				return fmt.Errorf("domain: %w", err)
 			}
+			domain.ID().ApplyT(func(id string) error {
+				domainID, err := strconv.Atoi(id)
+				if err != nil {
+					return fmt.Errorf("invalid id: %w", err)
+				}
 
-			// ctx.Log.Info(fmt.Sprintf("copying files to ip: %s", ip), nil)
-			// _, err := remote.NewCopyFile(ctx, "docker-compose-copy", &remote.CopyFileArgs{
-			// 	Connection: remote.ConnectionArgs{
-			// 		Host:               pulumi.String(ip),
-			// 		Password:           cfg.RequireSecret("root"),
-			// 		PrivateKey:         pulumi.String(privateKey),
-			// 		PrivateKeyPassword: cfg.RequireSecret("ssh_private_key_pass"),
-			// 	},
-			// 	LocalPath:  pulumi.String("docker-compose.yml"),
-			// 	RemotePath: pulumi.String("/root/docker-compose.yml"),
-			// })
-			// if err != nil {
-			// 	return fmt.Errorf("copy: %w", err)
-			// }
+				_, err = linode.NewDomainRecord(ctx, "A", &linode.DomainRecordArgs{
+					DomainId:   pulumi.Int(domainID),
+					RecordType: pulumi.String("A"),
+					Target:     pulumi.String(ip),
+				})
+				if err != nil {
+					return fmt.Errorf("record A: %w", err)
+				}
+
+				_, err = linode.NewDomainRecord(ctx, "cloud", &linode.DomainRecordArgs{
+					DomainId:   pulumi.Int(domainID),
+					Name:       pulumi.String("cloud"),
+					RecordType: pulumi.String("CNAME"),
+					Target:     pulumi.String("adrianforsiusconsulting.se"),
+				})
+				if err != nil {
+					return fmt.Errorf("cloud record: %w", err)
+				}
+
+				_, err = linode.NewDomainRecord(ctx, "pihole", &linode.DomainRecordArgs{
+					DomainId:   pulumi.Int(domainID),
+					Name:       pulumi.String("pihole"),
+					RecordType: pulumi.String("CNAME"),
+					Target:     pulumi.String("adrianforsiusconsulting.se"),
+				})
+				if err != nil {
+					return fmt.Errorf("pihole record: %w", err)
+				}
+
+				return nil
+			})
 
 			ctx.Log.Info(fmt.Sprintf("install deps using ip: %s", ip), nil)
 			pythonCmd, err := remote.NewCommand(ctx, "ansibleReqs", &remote.CommandArgs{
 				Connection: &remote.ConnectionArgs{
-					Host:       pulumi.String(ip),
-					Port:       pulumi.Float64(22),
-					PrivateKey: pulumi.String(privateKey),
+					Host:               pulumi.String(ip),
+					Port:               pulumi.Float64(22),
+					PrivateKey:         pulumi.String(privateKey),
+					PrivateKeyPassword: cfg.RequireSecret("ssh_private_key_pass"),
 				},
-				Create: pulumi.String("sudo yum update -y && sudo yum install python35 -y\n"),
+				Create: pulumi.String("sudo apt-get update -y && sudo apt-get install python3 -y\n"),
 			})
 			if err != nil {
 				return fmt.Errorf("ansible reqs: %w", err)
@@ -125,7 +135,7 @@ func main() {
 			}
 
 			cmd, err := local.NewCommand(ctx, "playbookRun", &local.CommandArgs{
-				Create: pulumi.String(fmt.Sprintf("ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i '%s,' --private-key %s playbook.with-envs.yml", ip, privateKey)),
+				Create: pulumi.String(fmt.Sprintf("ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i '%s,' --become-user root --private-key '%s' playbook.with-envs.yml", ip, privateKeyPath)),
 			}, pulumi.DependsOn([]pulumi.Resource{
 				renderCmd,
 				pythonCmd,

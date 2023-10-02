@@ -1,6 +1,7 @@
 ---
 - hosts: all
   become: true
+  user: root
 
   tasks:
     - name: Install aptitude
@@ -20,6 +21,12 @@
           - python3-pip
         state: latest
         update_cache: true
+
+    - name: Install bottle python package
+      ansible.builtin.pip:
+        name:
+          - docker >= 5.0.0
+          - docker-compose >= 1.7.0, < 2.0.0
 
     - name: Add Docker GPG apt Key
       apt_key:
@@ -42,9 +49,16 @@
         state: latest
         update_cache: true
 
+    - name: Ensure docker deamon is running
+      service:
+        name: docker
+        state: started
+      become: true
+
     - name: Run docker-compose up
       community.docker.docker_compose:
         project_src: .
       register: output
-      TS_AUTHKEY: $TS_AUTHKEY
+      environment:
+        TS_AUTHKEY: $TS_AUTHKEY
 
