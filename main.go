@@ -63,9 +63,10 @@ func main() {
 				return fmt.Errorf("copy: %w", err)
 			}
 
+			domainName := "adrianforsiusconsutling.se"
 			ctx.Log.Info("creating new domain...", nil)
-			domain, err := linode.NewDomain(ctx, "adrianforsiusconsulting.se", &linode.DomainArgs{
-				Domain:   pulumi.String("adrianforsiusconsulting.se"),
+			domain, err := linode.NewDomain(ctx, domainName, &linode.DomainArgs{
+				Domain:   pulumi.String(domainName),
 				SoaEmail: pulumi.String("adrianforsius@gmail.com"),
 				Type:     pulumi.String("master"),
 			})
@@ -91,7 +92,7 @@ func main() {
 					DomainId:   pulumi.Int(domainID),
 					Name:       pulumi.String("cloud"),
 					RecordType: pulumi.String("CNAME"),
-					Target:     pulumi.String("adrianforsiusconsulting.se"),
+					Target:     pulumi.String(domainName),
 				})
 				if err != nil {
 					return fmt.Errorf("cloud record: %w", err)
@@ -101,10 +102,30 @@ func main() {
 					DomainId:   pulumi.Int(domainID),
 					Name:       pulumi.String("pihole"),
 					RecordType: pulumi.String("CNAME"),
-					Target:     pulumi.String("adrianforsiusconsulting.se"),
+					Target:     pulumi.String(domainName),
 				})
 				if err != nil {
 					return fmt.Errorf("pihole record: %w", err)
+				}
+
+				_, err = linode.NewDomainRecord(ctx, "traefik", &linode.DomainRecordArgs{
+					DomainId:   pulumi.Int(domainID),
+					Name:       pulumi.String("traefik"),
+					RecordType: pulumi.String("CNAME"),
+					Target:     pulumi.String(domainName),
+				})
+				if err != nil {
+					return fmt.Errorf("traefik record: %w", err)
+				}
+
+				_, err = linode.NewDomainRecord(ctx, "www", &linode.DomainRecordArgs{
+					DomainId:   pulumi.Int(domainID),
+					Name:       pulumi.String("www"),
+					RecordType: pulumi.String("CNAME"),
+					Target:     pulumi.String(domainName),
+				})
+				if err != nil {
+					return fmt.Errorf("www record: %w", err)
 				}
 
 				return nil
@@ -127,7 +148,9 @@ func main() {
 			renderCmd, err := local.NewCommand(ctx, "playbookEnvs", &local.CommandArgs{
 				Create: pulumi.String("cat playbook.yml | envsubst > playbook.with-envs.yml"),
 				Environment: pulumi.StringMap{
-					"TS_AUTHKEY": cfg.RequireSecret("tailscale_auth_key"),
+					"PIHOLE_PASSWORD": cfg.RequireSecret("pihole_password"),
+					"TS_AUTHKEY":      cfg.RequireSecret("tailscale_auth_key"),
+					"LINODE_TOKEN":    cfg.RequireSecret("linode_token"),
 				},
 			})
 			if err != nil {
@@ -135,7 +158,7 @@ func main() {
 			}
 
 			cmd, err := local.NewCommand(ctx, "playbookRun", &local.CommandArgs{
-				Create: pulumi.String(fmt.Sprintf("ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i '%s,' --become-user root --private-key '%s' playbook.with-envs.yml", ip, privateKeyPath)),
+				Create: pulumi.String(fmt.Sprintf("ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i '%s,' playbook.with-envs.yml", ip)),
 			}, pulumi.DependsOn([]pulumi.Resource{
 				renderCmd,
 				pythonCmd,
