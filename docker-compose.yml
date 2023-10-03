@@ -9,6 +9,7 @@ services:
       - "--log.level=DEBUG"
       - "--api.dashboard=true"
       - "--providers.docker=true"
+      # if set to expose container "traefik.enabled=true" must be set
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.http.redirections.entryPoint.to=web-secure"
@@ -17,6 +18,7 @@ services:
       - "--entrypoints.web-secure.http3"
       - "--experimental.http3=true"
       - "--accesslog=true"
+      # disables SSL certificate verification between your traefik instance and your backend
       - "--serverstransport.insecureskipverify=true"
       - "--certificatesresolvers.certificato.acme.dnschallenge=true"
       - "--certificatesresolvers.certificato.acme.dnschallenge.provider=linode"
@@ -72,11 +74,11 @@ services:
     ports:
       - "53:53/tcp"
       - "53:53/udp"
-      - "80"
     environment:
       TZ: 'Europe/Stockholm'
       WEBPASSWORD: ${PIHOLE_PASSWORD}
     labels:
+      - "traefik.enable=true"
       - "traefik.http.routers.pihole.rule=Host(`pihole.adrianforsiusconsulting.se`)"
       - "traefik.http.routers.pihole.tls=true"
       - "traefik.http.routers.pihole.tls.certresolver=certificato"
