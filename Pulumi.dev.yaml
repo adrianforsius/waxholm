@@ -2,7 +2,7 @@ config:
   linode:token:
     secure: AAABABTpoNP6eXMS3D1nn42Qi1r9o2UVJLIxoMIj2ii1H6iZwW7Pp/g21BTE+KLchIUJgxpZu6h2pSsRUeHuXPyoCwxEYYu7HW4saP75v78SR8lv7sqk+Gz+H/URjWCV
   waxholm:linode_token:
-    secure: AAABADGSLoU14a9CiZY8naYF+Vvt/pkjaezsAZS2e9oBMAGzIXWO1tOfzpYTAfNm6cqUs2lPtteNM2pTa9rVEpO4A6NrdK6mLPS0KNI2dDB80Mt0q95mlvhR4d9gHU5Z
+    secure: AAABAF6XHtf/4zIdVVibf3kvblMr0L9AzXzDwQ5SZREsbMQBM6fG+jIG7VW0buEPqBLa8Ufga2q5jX+XqSo0eJ7tY1bdAyXF/bnUp4SFC8+GEjhXO6eSJTnf3ICw/Nxy
   waxholm:pihole_password:
     secure: AAABABooImVgcE6SJEXGK6zP1s3r1Fkg5gawLE1TMyJxLIbsb458/y0=
   waxholm:root:
