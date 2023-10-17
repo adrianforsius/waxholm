@@ -63,7 +63,7 @@ func main() {
 				return fmt.Errorf("copy: %w", err)
 			}
 
-			domainName := "adrianforsiusconsutling.se"
+			domainName := "adrianforsiusconsulting.se"
 			ctx.Log.Info("creating new domain...", nil)
 			domain, err := linode.NewDomain(ctx, domainName, &linode.DomainArgs{
 				Domain:   pulumi.String(domainName),

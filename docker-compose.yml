@@ -33,16 +33,11 @@ services:
     labels:
       traefik.enable: true
       traefik.http.routers.api.rule: Host(`traefik.adrianforsiusconsulting.se`)
-      traefik.http.routers.api.entrypoints: "web-secure"
-      traefik.http.routers.api.tls.certresolver: certificato"
-      traefik.http.routers.api.service: api@internal"
+      traefik.http.routers.api.tls: true
+      traefik.http.routers.api.tls.certresolver: certificato
+      traefik.http.routers.api.entrypoints: web-secure
+      traefik.http.routers.api.service: api@internal
 
-      # lowest priority catchall rule, will add/replace www. host portion
-      traefik.http.routers.matchlast.rule: PathPrefix(`/`)
-      traefik.http.routers.matchlast.priority: 1
-      traefik.http.routers.matchlast.middlewares: addwww
-      traefik.http.middlewares.addwww.redirectregex.regex: ^https://(?:www\.)?(.*)
-      traefik.http.middlewares.addwww.redirectregex.replacement: https://www.$$1
     ports:
       - 80:80
       - 443:443/tcp
@@ -54,14 +49,15 @@ services:
 
   web:
     image: nginxdemos/hello
-    ports:
-      - "80"
     labels:
       traefik.enable: true
-      traefik.http.routers.web.rule: Host(`www.adrianforsiusconsulting.se`)
+      traefik.http.routers.web.rule: Host(`www.adrianforsiusconsulting.se`) || Host(`adrianforsiusconsulting.se`)
       traefik.http.routers.web.tls: true
       traefik.http.routers.web.tls.certresolver: certificato
-      traefik.http.routers.web.entrypoints: websecure
+      traefik.http.routers.web.entrypoints: web-secure
+      traefik.http.routers.web.tls.domains[0].main: adrianforsiusconsulting.se
+      traefik.http.routers.web.tls.domains[0].sans: www.adrianforsiusconsulting.se
+      traefik.http.services.web.loadbalancer.server.port: 80
 
   tailscale:
     container_name: tailscale
@@ -91,7 +87,10 @@ services:
       traefik.http.routers.pihole.rule: Host(`pihole.adrianforsiusconsulting.se`)
       traefik.http.routers.pihole.tls: true
       traefik.http.routers.pihole.tls.certresolver: certificato
-      traefik.http.routers.pihole.entrypoints: websecure
+      traefik.http.routers.pihole.entrypoints: web-secure
+      traefik.http.routers.pihole.tls.domains[0].main: pihole.adrianforsiusconsulting.se
+      traefik.http.routers.pihole.tls.domains[0].sans: pihole.adrianforsiusconsulting.se
+      traefik.http.services.pihole.loadbalancer.server.port: 80
     volumes:
       - './etc-pihole:/etc/pihole'
       - './etc-dnsmasq.d:/etc/dnsmasq.d'

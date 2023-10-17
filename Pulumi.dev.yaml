@@ -1,15 +1,15 @@
 config:
   linode:token:
-    secure: AAABABTpoNP6eXMS3D1nn42Qi1r9o2UVJLIxoMIj2ii1H6iZwW7Pp/g21BTE+KLchIUJgxpZu6h2pSsRUeHuXPyoCwxEYYu7HW4saP75v78SR8lv7sqk+Gz+H/URjWCV
+    secure: AAABAHUNsHX4w1+nAzVR3WsOgySQE4J4KYTuxSoKlaZ+zEDun+WS0TpR6pmutOhE4bvkig3i3x/Lh4BvD+zo1G0QGm3zsy7SzLycHTRg7IPUm3xdFZYDMb1mBZrlSeK5
   waxholm:linode_token:
-    secure: AAABAF6XHtf/4zIdVVibf3kvblMr0L9AzXzDwQ5SZREsbMQBM6fG+jIG7VW0buEPqBLa8Ufga2q5jX+XqSo0eJ7tY1bdAyXF/bnUp4SFC8+GEjhXO6eSJTnf3ICw/Nxy
+    secure: AAABADlxqL+6id5PJE4Ex7Y9n0SIPyCSA8b6Q61Xv1yhBqHzMQftdCBfbpMhqsLcF7KbWPY9An7b2XLs59uffBozV/Ynop/ZA9cxp04zLtF0Jydop5wUyiZKK2fSyoIX
   waxholm:pihole_password:
-    secure: AAABABooImVgcE6SJEXGK6zP1s3r1Fkg5gawLE1TMyJxLIbsb458/y0=
+    secure: AAABALSTuILljr9GpEbtd8jdsqM7f1atp/MsT10XM9OEGqstEhqCJw==
   waxholm:root:
-    secure: AAABAHZRoQPfgwwPF7fukzDz9HuGtEgBgSJC3hZ2mjz3MxwlA+BsFq3QwynkBCkl/qMNCtOTDyEc82l3lEt5gKsePFWRfOHX5leNTc/tpwocaUSokRHocsO+i3V25LKU
+    secure: AAABAHqgOC9lEgFMk01GAdpHevG2xLGMNMv2YdxfFIlCj6P4Mf5qR8JW6P246aO/CYwVVVZj54byNMqyTEl1SK7hZd+OZN3S8thiqOP580s2/UFHeantZV6i17niiqgS
   waxholm:ssh_private_key_pass:
-    secure: AAABAM+gbNRh7k2DoSxmAcRtNoqxr7nsWEy0cxQDrw3Y3SxghzW2Oo0=
-  waxholm:ssh_private_key_path: /Users/adrianforsius/.ssh/id_ed25519
-  waxholm:ssh_public_key_path: /Users/adrianforsius/.ssh/id_ed25519.pub
+    secure: AAABAFeA2yWvVxnXRLqTnvP3hzuQbJPM18CHQpiE+GyIx6cb1vwnQQ==
+  waxholm:ssh_private_key_path: /home/adrianforsius/.ssh/id_ed25519
+  waxholm:ssh_public_key_path: /home/adrianforsius/.ssh/id_ed25519.pub
   waxholm:tailscale_auth_key:
-    secure: AAABAEf29kEra2No014Yq/Ynjm0r8EKjUDhod3GOnXa+Vkpje/vr2qpGI3X2lQkmxu5mXaW6iE1PK1Bpn033GM7azvqGCjSYCM2wdpAjbnl7Vb9SHZWsvps=
+    secure: AAABAF4k7NohPDQLK+Vr/rFPytPz73NrpS6Mt7dszcN1RdqK4K+3dYAUw7vMlgtjlbww58F4wH6tfn1I4Wd+0nZbgFe5jKxmJg1q0DDv8kIO49S8VH1vMQ==
